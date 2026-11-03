@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>记账与税费测算 · 个体户 / 小规模 / 一般纳税人</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1f2421;--mut:#6b726d;--line:#e3e1d9;--acc:#1d6b4f;--acc2:#e8f2ed;--red:#b4432f;--gold:#9a6b12;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141815;--card:#1d221f;--ink:#e8ece9;--mut:#98a29b;--line:#2f3732;--acc:#4fc194;--acc2:#1f3329;--red:#ef8b78;--gold:#e0b45a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141815;--card:#1d221f;--ink:#e8ece9;--mut:#98a29b;--line:#2f3732;--acc:#4fc194;--acc2:#1f3329;--red:#ef8b78;--gold:#e0b45a;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:18px 14px 40px}
+h1{font-size:21px;margin:4px 0 2px}
+.sub{color:var(--mut);font-size:13px;margin:0 0 14px}
+.tabs{display:flex;gap:6px;background:var(--line);padding:4px;border-radius:12px;margin-bottom:12px}
+.tabs button{flex:1;border:0;background:transparent;color:var(--mut);padding:9px 4px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}
+.tabs button.on{background:var(--card);color:var(--acc);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 10px}
+.hint{font-size:12.5px;color:var(--mut);margin:6px 0 0}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.f{flex:1 1 120px;min-width:0}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit}
+.btn{border:0;background:var(--acc);color:#fff;padding:10px 16px;border-radius:10px;font:inherit;font-weight:600;cursor:pointer;width:100%;margin-top:10px}
+.btn.s{background:transparent;color:var(--mut);border:1px solid var(--line);width:auto;margin:0;padding:4px 9px;font-size:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.k{background:var(--acc2);border-radius:11px;padding:10px 12px}
+.k b{display:block;font-size:18px;color:var(--acc)}
+.k span{font-size:12px;color:var(--mut)}
+.k.w b{color:var(--red)}
+.tax{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);gap:10px}
+.tax:last-child{border:0}
+.tax em{font-style:normal;color:var(--mut);font-size:12.5px;display:block}
+.tax strong{white-space:nowrap}
+.item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}
+.item .m{flex:1;min-width:0}
+.item .m small{color:var(--mut);display:block;font-size:12px}
+.inc{color:var(--acc);font-weight:700}.out{color:var(--red);font-weight:700}
+.empty{color:var(--mut);text-align:center;padding:16px 0}
+.tag{font-size:11px;padding:1px 6px;border-radius:6px;background:var(--acc2);color:var(--acc);margin-left:4px}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;margin-top:8px}.chk input{width:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>记账与税费测算</h1>
+<p class="sub">选择主体类型 → 记收支 → 自动估算增值税、附加税与所得税。数据仅保存在本机浏览器。</p>
+
+<div class="card"><div class="row"><div class="f"><label>当前账套</label><select id="bk"></select></div><div class="f"><label>新建账套名称</label><input id="bn" placeholder="如：奶茶店 / 某某公司"></div></div><div class="row"><button class="btn" id="bnew" style="flex:1">新建账套</button><button class="btn s" id="bdel" style="margin-top:10px">删除当前账套</button></div></div>
+<div class="tabs" id="tabs">
+<button data-t="geti">个体户</button><button data-t="small">小规模纳税人</button><button data-t="general">一般纳税人</button>
+</div>
+
+<div class="card"><h2 id="tt"></h2><p class="hint" id="td"></p></div>
+
+<div class="card">
+<h2>记一笔</h2>
+<div class="row">
+<div class="f"><label>日期</label><input type="date" id="d"></div>
+<div class="f"><label>类型</label><select id="ty"><option value="in">收入（销售）</option><option value="out">支出（成本费用）</option></select></div>
+</div>
+<div class="row" style="margin-top:8px">
+<div class="f" style="flex-basis:180px"><label>摘要</label><input id="n" placeholder="如：货款、房租、进货"></div><div class="f"><label>科目</label><select id="cat"></select></div>
+<div class="f"><label>金额（含税，元）</label><input id="a" type="number" inputmode="decimal" min="0" step="0.01"></div>
+<div class="f" id="rw"><label>税率</label><select id="r"><option value="0.13">13%</option><option value="0.09">9%</option><option value="0.06">6%</option><option value="0.03">3%</option><option value="0">0%（免税）</option></select></div>
+</div>
+<label class="chk" id="cw"><input type="checkbox" id="c" checked>取得增值税专用发票（进项可抵扣）</label>
+<button class="btn" id="add">添加记录</button>
+</div>
+
+<div class="card">
+<h2>统计周期</h2>
+<div class="row">
+<div class="f"><label>周期</label><select id="mode"><option value="month">按月</option><option value="quarter">按季度</option><option value="year">按年</option></select></div>
+<div class="f"><label>所在月份</label><input type="month" id="anc"></div>
+<div class="f" id="gw"><label>个税征收方式</label><select id="gm"><option value="audit">查账征收</option><option value="quota">核定征收</option></select></div><div class="f" id="qw"><label>应税所得率</label><select id="qr"><option value="0.05">5%</option><option value="0.08">8%</option><option value="0.1">10%</option><option value="0.2">20%</option></select></div><div class="f" id="vw"><label>征收率</label><select id="vr"><option value="0.01">1%（优惠期）</option><option value="0.03">3%</option></select></div>
+</div>
+<label class="chk" id="hw"><input type="checkbox" id="hf">享受个体工商户经营所得减半征收（年应纳税所得额 200 万元以内部分）</label>
+</div>
+
+<div class="card"><h2>本期汇总</h2><div class="grid" id="sum"></div></div>
+<div class="card"><h2>税费估算</h2><div id="tx"></div><p class="hint" id="nt"></p></div>
+<div class="card"><h2>申报数据汇总</h2><div id="rp"></div><p class="hint">按上方「统计周期」汇总，可对照增值税申报表填写；所得税为所选年度的累计估算。</p></div>
+<div class="card"><h2>申报提醒</h2><div id="rm"></div><p class="hint">按常规征期推算，遇节假日顺延，具体以当地税务机关公布的征期日历为准。</p></div>
+<div class="card"><h2>客户与发票台账</h2>
+<div class="row"><div class="f"><label>方向</label><select id="idr"><option value="out">开出发票（销售）</option><option value="in">收到发票（采购）</option></select></div><div class="f"><label>客户 / 供应商</label><input id="icu"></div></div>
+<div class="row" style="margin-top:8px"><div class="f"><label>发票号码</label><input id="ino"></div><div class="f"><label>类型</label><select id="ity"><option>普票</option><option>专票</option></select></div><div class="f"><label>含税金额</label><input id="iam" type="number" inputmode="decimal" min="0" step="0.01"></div></div>
+<button class="btn" id="iadd">添加发票</button>
+<div class="grid" id="isum" style="margin-top:10px"></div><div id="ilist"></div></div>
+<div class="card"><h2>固定资产折旧</h2>
+<div class="row"><div class="f"><label>资产名称</label><input id="fn"></div><div class="f"><label>购入日期</label><input type="date" id="fd"></div></div>
+<div class="row" style="margin-top:8px"><div class="f"><label>原值（元）</label><input id="fv" type="number" inputmode="decimal" min="0"></div><div class="f"><label>使用年限（年）</label><input id="fl" type="number" value="5"></div><div class="f"><label>残值率 %</label><input id="fs" type="number" value="5"></div></div>
+<button class="btn" id="fadd">添加资产</button><div id="flist"></div>
+<p class="hint">直线法，自购入次月起按月计提；折旧已自动计入上方「成本费用」和所得税估算。</p></div>
+<div class="card"><h2>员工工资、社保与公积金</h2>
+<div class="row"><div class="f"><label>姓名</label><input id="en"></div><div class="f"><label>月工资（税前）</label><input id="ew" type="number" inputmode="decimal" min="0"></div><div class="f"><label>社保缴纳方式</label><select id="em"><option value="min">广州最低基数</option><option value="wage">按本人工资（不低于最低基数）</option><option value="pct">自定义比例</option></select></div><div class="f" id="erw" style="display:none"><label>单位缴费比例 %</label><input id="er" type="number" value="30"></div></div>
+<div class="row" style="margin-top:8px"><div class="f"><label>公积金基数（空=按月工资）</label><input id="gb" type="number" inputmode="decimal" min="0"></div><div class="f"><label>单位公积金 %</label><input id="gu" type="number" step="0.5" min="0" max="12" placeholder="0=不缴"></div><div class="f"><label>个人公积金 %</label><input id="gp" type="number" step="0.5" min="0" max="12" placeholder="0=不缴"></div><div class="f"><label>每月专项附加扣除（元）</label><input id="gd" type="number" inputmode="decimal" min="0" placeholder="子女教育、房贷等合计"></div></div>
+<button class="btn" id="eadd">添加员工</button><div id="elist"></div><div id="ssd"></div>
+<button class="btn" id="epay">将所选月份的工资、社保与公积金记入成本</button>
+<p class="hint">广州标准——个人：养老 8%、医疗 2%、失业 0.2%，工伤和生育个人不缴；单位：养老 14%，基数下限 5521 元（2026 年 7 月起）；医疗含生育 6.85%，基数下限 6234 元；失业 0.32%、工伤 0.2%（按行业，近似按 5521 元计，请核对）。公积金需手动填写基数和比例（单位、个人各 5%–12%，基数留空则按月工资），个税仅在明细里按累计预扣法估算，不入账；已记入的月份不会重复记入。</p></div>
+<div class="card"><h2>支出科目占比</h2><div id="cats"></div></div>
+<div class="card"><h2>全年月度趋势</h2><div id="trend"></div><p class="hint">绿色为不含税收入，红色为成本费用。</p></div>
+<div class="card"><h2>年度利润表（所选年度）</h2><div id="plt"></div></div>
+<div class="card"><h2>账套对比（所选年度）</h2><div id="bcmp"></div></div>
+<div class="card" id="xcard"><h2>其他小税种（广州）</h2>
+<label class="chk" style="margin:0 0 10px"><input type="checkbox" id="xhx" checked>享受「六税两费」减半（小规模纳税人、小型微利企业、个体工商户）</label>
+<b>印花税</b>
+<div class="row" style="margin-top:6px"><div class="f" style="flex-basis:200px"><label>合同类型</label><select id="xyt"><option value="0.0003">买卖合同 0.03%</option><option value="0.0005">加工承揽 0.05%</option><option value="0.0003">建设工程 0.03%</option><option value="0.001">租赁合同 0.1%</option><option value="0.0003">运输合同 0.03%</option><option value="0.001">仓储保管 0.1%</option><option value="0.00005">借款合同 0.005%</option><option value="0.00025">营业账簿（实收资本+资本公积）0.025%</option></select></div><div class="f"><label>合同金额（不含增值税，元）</label><input id="xya" type="number" inputmode="decimal" min="0"></div></div>
+<b style="display:block;margin-top:12px">房产税与城镇土地使用税（全年）</b>
+<div class="row" style="margin-top:6px"><div class="f"><label>自用房产原值（元）</label><input id="xfo" type="number" inputmode="decimal" min="0"></div><div class="f"><label>出租年租金（元）</label><input id="xfr" type="number" inputmode="decimal" min="0"></div></div>
+<div class="row" style="margin-top:8px"><div class="f"><label>土地面积（㎡）</label><input id="xla" type="number" inputmode="decimal" min="0"></div><div class="f"><label>土地税额（元/㎡·年）</label><input id="xlr" type="number" inputmode="decimal" min="0" placeholder="按所在区标准"></div></div>
+<b style="display:block;margin-top:12px">残疾人就业保障金（年度）</b>
+<div class="row" style="margin-top:6px"><div class="f"><label>上年在职职工人数</label><input id="xcn" type="number" min="0"></div><div class="f"><label>已安排残疾人数</label><input id="xcd" type="number" min="0" value="0"></div><div class="f"><label>职工年平均工资（元）</label><input id="xcw" type="number" inputmode="decimal" min="0"></div></div>
+<div id="xout" style="margin-top:10px"></div>
+<p class="hint">印花税税率依据《印花税法》；六税两费减半政策执行至 2027 年底。土地税额因区而异，请按所在区标准填写。残保金按国家规定估算，未含广州地方征收比例等规定，请以广州税务局通告为准。个体户定期定额未包含。</p></div>
+<div class="card"><h2>本期流水</h2><div id="ls"></div><button class="btn" id="cp">复制流水（CSV，可粘贴到 Excel）</button><textarea id="csv" style="display:none;width:100%;height:120px;margin-top:8px"></textarea></div>
+<div class="card"><h2>数据备份与恢复</h2><div class="row"><button class="btn" id="bexp" style="flex:1">导出全部账套</button><button class="btn" id="bimp" style="flex:1">从文本恢复</button></div><textarea id="bta" style="width:100%;height:100px;margin-top:8px;display:block;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit" placeholder="导出后在此复制保存；恢复时把备份文本粘贴到这里"></textarea><p class="hint">数据只存在本机浏览器，换设备或清理缓存前请先导出备份。</p></div>
+<p class="hint">测算仅供参考，政策（征收率、免征额、减半优惠等）可能调整，申报请以税务机关及专业会计意见为准。</p>
+</div>
+
+<script>
+var T={
+geti:{n:"个体工商户",d:"按小规模纳税人缴纳增值税；经营所得缴纳个人所得税（查账征收，5%–35% 超额累进，含 6 万元基本减除费用）。"},
+small:{n:"小规模纳税人（公司）",d:"增值税按销售额 × 征收率（1% 或 3%）；月销售额 10 万元（季度 30 万元）以下可免征；企业所得税按小型微利企业估算。"},
+general:{n:"一般纳税人（公司）",d:"增值税 = 销项税额 − 可抵扣进项税额，按 13%/9%/6% 税率逐笔记录；企业所得税按小型微利企业估算。"}};
+function defS(){return {type:'geti',list:[],inv:[],fa:[],emp:[],mode:'month',anc:'',vr:'0.01',gm:'audit',qr:'0.1',half:false}}var S=defS();
+var $=function(i){return document.getElementById(i)};
+var BK={cur:'b1',names:{b1:'默认账套'}};
+function initBK(){try{var x=localStorage.getItem('acct_bk');if(x)BK=JSON.parse(x)}catch(e){}}
+function load(){try{var x=localStorage.getItem('acct_'+BK.cur);if(!x&&BK.cur==='b1')x=localStorage.getItem('acct_v1');if(x){var o=JSON.parse(x);for(var k in o)S[k]=o[k]}}catch(e){}}
+function save(){try{localStorage.setItem('acct_bk',JSON.stringify(BK));localStorage.setItem('acct_'+BK.cur,JSON.stringify(S))}catch(e){}}
+function m2(n){return "¥"+(Math.round(n*100)/100).toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function inP(dt,anc,mode){var y=+anc.slice(0,4),m=+anc.slice(5,7),Y=+dt.slice(0,4),M=+dt.slice(5,7);
+if(Y!==y)return false;if(mode==="year")return true;if(mode==="month")return M===m;return Math.floor((M-1)/3)===Math.floor((m-1)/3)}
+function calc(list,type,vr){
+var inN=0,outN=0,outT=0,inT=0,cost=0;
+list.forEach(function(e){var r=type==="general"?e.r:(e.type==="in"?vr:0);
+if(e.type==="in"){var n=e.a/(1+r);inN+=n;outT+=e.a-n}
+else{if(type==="general"&&e.c&&e.r>0){var n2=e.a/(1+e.r);inT+=e.a-n2;cost+=n2}else cost+=e.a}});
+return {inN:inN,outT:outT,inT:inT,cost:cost,profit:inN-cost}}
+function geti(p){var t=p-60000;if(t<=0)return {tax:0,t:0};
+var b=[[30000,.05,0],[90000,.1,1500],[300000,.2,10500],[500000,.3,40500],[1e12,.35,65500]];
+for(var i=0;i<b.length;i++)if(t<=b[i][0])return {tax:t*b[i][1]-b[i][2],t:t,r:b[i][1]}}
+function render(){
+var tabs=document.querySelectorAll("#tabs button");
+tabs.forEach(function(b){b.classList.toggle("on",b.dataset.t===S.type)});
+$("tt").textContent=T[S.type].n;$("td").textContent=T[S.type].d;
+var g=S.type==="general";
+$("rw").style.display=g?"":"none";$("cw").style.display=(g&&$("ty").value==="out")?"":"none";
+$("vw").style.display=g?"none":"";
+$("gw").style.display=$("hw").style.display=S.type==="geti"?"":"none";
+$("qw").style.display=(S.type==="geti"&&S.gm==="quota")?"":"none";
+$("gm").value=S.gm;$("qr").value=S.qr;$("hf").checked=!!S.half;
+$("mode").value=S.mode;$("anc").value=S.anc;$("vr").value=S.vr;
+var vr=+S.vr;
+var per=S.list.filter(function(e){return inP(e.d,S.anc,S.mode)});
+var ytd=S.list.filter(function(e){return inP(e.d,S.anc,"year")});
+var c=calc(per,S.type,vr),y=calc(ytd,S.type,vr);
+var dc=depOf(S.anc,S.mode),dy=depOf(S.anc,'year');c.cost+=dc;c.profit-=dc;y.cost+=dy;y.profit-=dy;
+$("sum").innerHTML=
+'<div class="k"><b>'+m2(c.inN)+'</b><span>不含税收入</span></div>'+
+'<div class="k"><b>'+m2(c.cost)+'</b><span>成本费用'+(g?"（不含可抵扣进项）":"")+'</span></div>'+
+'<div class="k'+(c.profit<0?" w":"")+'"><b>'+m2(c.profit)+'</b><span>本期利润</span></div>'+
+'<div class="k"><b>'+per.length+'</b><span>记录笔数</span></div>';
+var rows=[],total=0,note="";
+// VAT
+var vat=0,sur=0;
+if(g){vat=c.outT-c.inT;rows.push(["销项税额","收入 ÷ (1+税率) × 税率",c.outT]);rows.push(["可抵扣进项税额","取得专票的支出",-c.inT]);
+if(vat<0){rows.push(["本期留抵税额","结转下期抵扣",-vat]);vat=0}else rows.push(["应纳增值税","销项 − 进项",vat]);
+sur=vat*0.12;rows.push(["附加税费","城建7%+教育3%+地方教育2%",sur])}
+else{var th=S.mode==="month"?1e5:S.mode==="quarter"?3e5:1.2e6;
+if(c.inN<=th){rows.push(["增值税","销售额未超 "+m2(th)+"，免征",0])}else{vat=c.inN*vr;rows.push(["应纳增值税","不含税销售额 × "+(vr*100)+"%",vat])}
+sur=vat*0.06;rows.push(["附加税费","按 12% 减半（六税两费）",sur])}
+total=vat+sur;
+// income tax (YTD)
+var it=0,ik="";
+if(S.type==="geti"){var q=S.gm==="quota";var base=q?y.inN*(+S.qr):y.profit;var r=geti(base);it=r.tax;
+if(S.half&&r.t>0){var t2=Math.min(r.t,2e6);it=r.tax-geti(t2+60000).tax/2}
+ik=(q?"核定征收：全年不含税收入 "+m2(y.inN)+" × "+(S.qr*100)+"% = "+m2(base):"查账征收：全年累计利润 "+m2(y.profit))+"，扣除 6 万后应纳税所得额 "+m2(r.t)+(S.half&&r.t>0?"，已减半":"");
+note="经营所得个税按所选月份所在年度的全部记录累计估算；核定征收的应税所得率请按主管税务机关核定的行业比例选择。"}
+else{var p=Math.max(y.profit,0);it=p<=3e6?p*0.05:p*0.25;ik="全年累计利润 "+m2(y.profit)+"，按"+(p<=3e6?"小型微利企业实际税负约 5%":"25% 税率")+"估算";
+note="企业所得税按所选年度累计利润估算（未考虑纳税调整、亏损弥补等）。"}
+rows.push([S.type==="geti"?"个人所得税（经营所得，年度累计）":"企业所得税（年度累计）",ik,it]);
+var h="";rows.forEach(function(r){h+='<div class="tax"><div>'+r[0]+'<em>'+r[1]+'</em></div><strong>'+m2(r[2])+'</strong></div>'});
+h+='<div class="tax"><div><b>本期流转税合计</b><em>增值税 + 附加税费</em></div><strong class="out">'+m2(total)+'</strong></div>';
+$("tx").innerHTML=h;$("nt").textContent=note;
+var ct={},ctt=0;
+per.forEach(function(e){if(e.type==='out'){var x=(g&&e.c&&e.r>0)?e.a/(1+e.r):e.a;var k=e.k||'未分类';ct[k]=(ct[k]||0)+x;ctt+=x}});
+if(dc>0){ct['折旧摊销']=(ct['折旧摊销']||0)+dc;ctt+=dc}
+var ck=Object.keys(ct).sort(function(a,b){return ct[b]-ct[a]});
+$('cats').innerHTML=ck.length?ck.map(function(k){var p=ct[k]/ctt*100;return '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>'+esc(k)+'</span><span>'+m2(ct[k])+' · '+p.toFixed(0)+'%</span></div><div style="height:7px;background:var(--line);border-radius:4px;margin-top:3px"><div style="height:7px;width:'+p+'%;background:var(--red);border-radius:4px"></div></div></div>'}).join(''):'<div class="empty">本期暂无支出</div>';
+var mi=[],mo=[],mx=1,i;for(i=0;i<12;i++){mi.push(0);mo.push(0)}
+ytd.forEach(function(e){var m=+e.d.slice(5,7)-1;if(e.type==='in'){var q=g?e.r:vr;mi[m]+=e.a/(1+q)}else mo[m]+=(g&&e.c&&e.r>0)?e.a/(1+e.r):e.a});
+var by0=(+S.anc.slice(0,4))*12;for(i=0;i<12;i++)(S.fa||[]).forEach(function(a){mo[i]+=fm(a,by0+i,by0+i)*mdp(a)});
+for(i=0;i<12;i++)mx=Math.max(mx,mi[i],mo[i]);
+var tg='<div style="display:flex;align-items:flex-end;gap:4px;height:120px">';
+for(i=0;i<12;i++)tg+='<div style="flex:1;display:flex;align-items:flex-end;gap:1px;height:100%" title="'+(i+1)+'月"><div style="flex:1;background:var(--acc);border-radius:2px 2px 0 0;height:'+(mi[i]/mx*100)+'%"></div><div style="flex:1;background:var(--red);border-radius:2px 2px 0 0;height:'+(mo[i]/mx*100)+'%"></div></div>';
+tg+='</div><div style="display:flex;gap:4px;font-size:10.5px;color:var(--mut);margin-top:3px">';
+for(i=0;i<12;i++)tg+='<span style="flex:1;text-align:center">'+(i+1)+'</span>';
+$('trend').innerHTML=S.anc.slice(0,4)+' 年（横轴为月份）'+tg+'</div>';
+$('bk').innerHTML=Object.keys(BK.names).map(function(id){return '<option value="'+id+'"'+(id===BK.cur?' selected':'')+'>'+esc(BK.names[id])+'</option>'}).join('');
+$('bdel').textContent='删除当前账套';delArm=false;
+var iv=S.inv||[],ar=0,ap=0,by={};
+iv.forEach(function(v){if(v.st!=='done'){if(v.dr==='out'){ar+=v.a;by[v.cu]=(by[v.cu]||0)+v.a}else ap+=v.a}});
+$('isum').innerHTML='<div class="k"><b>'+m2(ar)+'</b><span>应收未收</span></div><div class="k w"><b>'+m2(ap)+'</b><span>应付未付</span></div>';
+var bk2=Object.keys(by);
+$('ilist').innerHTML=(bk2.length?'<p class="hint" style="margin-bottom:6px">应收明细：'+bk2.map(function(k){return esc(k)+' '+m2(by[k])}).join('；')+'</p>':'')+(iv.length?iv.slice().reverse().map(function(v){var o=v.dr==='out';return '<div class="item"><div class="m">'+esc(v.cu)+'<span class="tag">'+v.tp+(v.st==='done'?(o?' 已收':' 已付'):(o?' 未收':' 未付'))+'</span><small>'+v.d+' · '+(o?'开出':'收到')+(v.no?' · '+esc(v.no):'')+'</small></div><span class="'+(o?'inc':'out')+'">'+m2(v.a)+'</span><button class="btn s" data-st="'+v.id+'">'+(v.st==='done'?'撤销':(o?'已收款':'已付款'))+'</button><button class="btn s" data-iv="'+v.id+'">删除</button></div>'}).join(''):'<div class="empty">还没有发票记录</div>');
+var t0=new Date();t0.setHours(0,0,0,0);
+$('rm').innerHTML=remind(t0).sort(function(a,b){return a[0]-b[0]}).map(function(x){var n=Math.round((x[0]-t0)/864e5);return '<div class="tax"><div>'+x[1]+'<em>'+x[0].getFullYear()+'-'+(x[0].getMonth()+1)+'-'+x[0].getDate()+'前</em></div><strong class="'+(n<=7?'out':'')+'">'+(n===0?'今天截止':n+' 天后')+'</strong></div>'}).join('');
+var p1=pr(S.anc,S.mode)[1],fh='';
+(S.fa||[]).forEach(function(a){var md=mdp(a),acc=fm(a,-1e9,p1)*md;fh+='<div class="item"><div class="m">'+esc(a.n)+'<small>'+a.d+' · 原值 '+m2(a.v)+' · 月折旧 '+m2(md)+'</small><small>累计折旧 '+m2(acc)+' · 净值 '+m2(a.v-acc)+'</small></div><button class="btn s" data-fd="'+a.id+'">删除</button></div>'});
+$('flist').innerHTML=fh||'<div class="empty">暂无固定资产</div>';
+var eh='',et=0;
+(S.emp||[]).forEach(function(q){var sv=ssOf(q),g0=gj(q),c2=q.w+sv+(g0?g0.u:0);et+=c2;eh+='<div class="item"><div class="m">'+esc(q.n)+'<small>月工资 '+m2(q.w)+' · 单位社保 '+m2(sv)+(q.m==='min'?'（最低基数）':q.m==='wage'?'（按工资）':'（'+q.rt+'%）')+(q.m&&q.m!=='pct'?' · 个人社保 '+m2(ssP(q)):'')+(g0?' · 公积金 单位 '+m2(g0.u)+' / 个人 '+m2(g0.p):'')+'</small></div><span class="out">'+m2(c2)+'</span><button class="btn s" data-ed="'+q.id+'">删除</button></div>'});
+$('elist').innerHTML=eh?eh+'<p class="hint">每月用工成本合计 '+m2(et)+'</p>':'<div class="empty">暂无员工</div>';
+var sh='';(S.emp||[]).forEach(function(q){var r=ssRows(q),g1=gj(q);if(g1&&r)r=r.concat([g1]);
+sh+='<div style="margin-top:14px"><b>'+esc(q.n)+'　社保明细（每月）</b>';
+if(!r){sh+='<p class="hint">自定义比例：单位社保合计 '+m2(ssOf(q))+'，未拆分险种，个人部分未计算。'+(g1?'公积金：基数 '+g1.b+'，单位 '+(g1.ur*100)+'% · '+m2(g1.u)+'，个人 '+(g1.pr*100)+'% · '+m2(g1.p)+'。':'')+'</p></div>';return}
+var ut=0,pt2=0;
+sh+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px;white-space:nowrap"><tr style="color:var(--mut);text-align:right"><th style="text-align:left;font-weight:500">险种</th><th style="font-weight:500">缴费基数</th><th style="font-weight:500">单位交</th><th style="font-weight:500">个人交</th></tr>';
+r.forEach(function(x){ut+=x.u;pt2+=x.p;sh+='<tr style="border-top:1px solid var(--line);text-align:right"><td style="text-align:left;padding:5px 8px 5px 0">'+x.n+'</td><td>'+x.b+'</td><td>'+(x.ur*100).toFixed(2)+'% · '+m2(x.u)+'</td><td>'+(x.pr?(x.pr*100).toFixed(2)+'% · '+m2(x.p):'不缴')+'</td></tr>'});
+sh+='<tr style="border-top:2px solid var(--line);text-align:right;font-weight:700"><td style="text-align:left;padding:5px 0">合计</td><td></td><td>'+m2(ut)+'</td><td>'+m2(pt2)+'</td></tr></table></div>';
+var xx=q.w-5000-pt2-(q.gd||0),nn=+S.anc.slice(5,7),tx1=xx>0?iit(nn*xx)-iit((nn-1)*xx):0;sh+='<p class="hint">单位每月共付 '+m2(q.w+ut)+'（工资 '+m2(q.w)+' + 单位五险一金 '+m2(ut)+'）；个人五险一金 '+m2(pt2)+' 从工资中扣，扣除后到手约 '+m2(q.w-pt2)+'；专项附加扣除 '+m2(q.gd||0)+'，预扣个税约 '+m2(tx1)+'，实发约 '+m2(q.w-pt2-tx1)+'（累计预扣法，假设年初起按此工资和扣除额，仅供参考）。</p></div>'});
+$('ssd').innerHTML=sh;
+var rg={},rh='';
+per.forEach(function(e){if(e.type!=='in')return;var r0=g?e.r:vr,n0=e.a/(1+r0),k=(Math.round(r0*100))+'%';rg[k]=rg[k]||[0,0];rg[k][0]+=n0;rg[k][1]+=e.a-n0});
+rh+=ln('销售额（不含税）','按税率/征收率分列',m2(c.inN));
+Object.keys(rg).sort().forEach(function(k){rh+=ln('　'+k,'销售额 '+m2(rg[k][0]),'税额 '+m2(rg[k][1]))});
+if(g){var d0=c.outT-c.inT;rh+=ln('销项税额合计','',m2(c.outT))+ln('进项税额（可抵扣）','取得专票的支出',m2(c.inT))+ln(d0>=0?'应纳增值税':'期末留抵税额','销项 − 进项',m2(Math.abs(d0)))}
+else{var ex=c.inN<=th;rh+=ln('免税销售额',ex?'未超过免征额，免征':'超过免征额，不适用',m2(ex?c.inN:0))+ln('应征销售额','征收率 '+(vr*100)+'%',m2(ex?0:c.inN))+ln('应纳增值税','',m2(vat))}
+var f=g?1:.5;
+rh+=ln('城市维护建设税',(7*f)+'%'+(g?'':'（减半）'),m2(vat*.07*f))+ln('教育费附加',(3*f)+'%',m2(vat*.03*f))+ln('地方教育附加',(2*f)+'%',m2(vat*.02*f))+ln('增值税及附加合计','',m2(total))+ln(S.type==='geti'?'个人所得税（年度累计）':'企业所得税（年度累计）','',m2(it));
+$('rp').innerHTML=rh;
+var yr0=S.anc.slice(0,4),pt='',cu=0,sI=0,sC=0;
+for(i=0;i<12;i++){var ms=yr0+'-'+('0'+(i+1)).slice(-2),cm=calc(S.list.filter(function(e){return e.d.slice(0,7)===ms}),S.type,vr),dm=0;
+(S.fa||[]).forEach(function(a){dm+=fm(a,by0+i,by0+i)*mdp(a)});
+var cs=cm.cost+dm,pf=cm.inN-cs;cu+=pf;sI+=cm.inN;sC+=cs;
+pt+='<tr style="text-align:right;border-top:1px solid var(--line)"><td style="text-align:left;padding:5px 8px 5px 0">'+(i+1)+' 月</td><td>'+m2(cm.inN)+'</td><td>'+m2(cs)+'</td><td'+(pf<0?' style="color:var(--red)"':'')+'>'+m2(pf)+'</td><td>'+m2(cu)+'</td></tr>'}
+$('plt').innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap"><tr style="color:var(--mut);text-align:right"><th style="text-align:left;font-weight:500">月份</th><th style="font-weight:500">不含税收入</th><th style="font-weight:500">成本费用</th><th style="font-weight:500">利润</th><th style="font-weight:500">累计利润</th></tr>'+pt+'<tr style="text-align:right;border-top:2px solid var(--line);font-weight:700"><td style="text-align:left;padding:5px 0">全年</td><td>'+m2(sI)+'</td><td>'+m2(sC)+'</td><td>'+m2(sI-sC)+'</td><td></td></tr></table></div><p class="hint">'+yr0+' 年；全年利润率 '+(sI>0?((sI-sC)/sI*100).toFixed(1)+'%':'—')+'（利润 ÷ 不含税收入）。成本费用含固定资产折旧，未含增值税及附加和所得税。</p>';
+xrender();
+var bh='',bti=0,btp=0,TN={geti:'个体户',small:'小规模纳税人',general:'一般纳税人'};
+Object.keys(BK.names).forEach(function(id){var s2=null;if(id===BK.cur)s2=S;else{try{s2=JSON.parse(localStorage.getItem('acct_'+id))}catch(e){}}
+if(!s2||!s2.list)return;
+var cx=calc(s2.list.filter(function(e){return inP(e.d,S.anc,'year')}),s2.type||'geti',+s2.vr||.01),dd=0;
+(s2.fa||[]).forEach(function(a){for(var k=0;k<12;k++)dd+=fm(a,by0+k,by0+k)*mdp(a)});
+var pf2=cx.inN-cx.cost-dd;bti+=cx.inN;btp+=pf2;
+bh+='<div class="item"><div class="m">'+esc(BK.names[id])+(id===BK.cur?'<span class="tag">当前</span>':'')+'<small>'+(TN[s2.type]||'')+' · 收入 '+m2(cx.inN)+'</small></div><span class="'+(pf2<0?'out':'inc')+'">'+m2(pf2)+'</span></div>'});
+$('bcmp').innerHTML=bh+(Object.keys(BK.names).length>1?'<p class="hint">全部账套合计：收入 '+m2(bti)+'，利润 '+m2(btp)+'。利润为不含税收入减成本费用（含折旧）。</p>':'<p class="hint">新建账套后，这里会把各账套的全年利润放在一起对比。</p>');
+// list
+var L=per.slice().sort(function(a,b){return a.d<b.d?1:-1});
+$("ls").innerHTML=L.length?L.map(function(e){
+var tag=g?'<span class="tag">'+(e.r*100)+'%'+(e.type==="out"&&e.c?" 专票":"")+'</span>':"";
+return '<div class="item"><div class="m">'+esc(e.n||(e.type==="in"?"收入":"支出"))+tag+'<small>'+e.d+(e.k?' · '+esc(e.k):'')+'</small></div><span class="'+(e.type==="in"?"inc":"out")+'">'+(e.type==="in"?"+":"−")+m2(e.a)+'</span><button class="btn s" data-ed2="'+e.id+'">编辑</button><button class="btn s" data-id="'+e.id+'">删除</button></div>'}).join(""):'<div class="empty">本期暂无记录，先记一笔吧</div>';
+}
+var CATS={in:['主营业务收入','其他收入'],out:['进货成本','房租水电','工资社保','运输物流','办公费用','广告推广','其他费用']};
+function fillCat(){$('cat').innerHTML=CATS[$('ty').value].map(function(c){return '<option>'+c+'</option>'}).join('')}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+document.getElementById("tabs").onclick=function(e){var t=e.target.dataset.t;if(t){S.type=t;save();render()}};
+$("ty").onchange=function(){fillCat();render()};
+$("mode").onchange=function(){S.mode=this.value;save();render()};
+$("anc").onchange=function(){if(this.value){S.anc=this.value;save();render()}};
+$("vr").onchange=function(){S.vr=this.value;save();render()};
+$("gm").onchange=function(){S.gm=this.value;save();render()};
+$("qr").onchange=function(){S.qr=this.value;save();render()};
+$("hf").onchange=function(){S.half=this.checked;save();render()};
+$("cp").onclick=function(){var L=S.list.filter(function(e){return inP(e.d,S.anc,S.mode)}).sort(function(a,b){return a.d<b.d?-1:1});
+var t="日期,类型,摘要,含税金额,税率,专票\n"+L.map(function(e){return [e.d,e.type==="in"?"收入":"支出",'"'+(e.n||"").replace(/"/g,'""')+'"',e.a,S.type==="general"?e.r:"",e.c&&e.type==="out"?"是":""].join(",")}).join("\n");
+var ta=$("csv");ta.value=t;ta.style.display="block";ta.select();var ok=false;try{ok=document.execCommand("copy")}catch(x){}
+if(!ok){try{navigator.clipboard.writeText(t)}catch(x){}}this.textContent="已生成，文本框内容可全选复制"};
+$("add").onclick=function(){var a=parseFloat($("a").value);var d=$("d").value;
+if(!(a>0)||!d){alert("请填写日期和大于 0 的金额");return}
+var oldpk=null;if(editId){var oe=S.list.filter(function(x){return x.id===editId})[0];if(oe)oldpk=oe.pk;S.list=S.list.filter(function(x){return x.id!==editId});editId=null;$("add").textContent="添加记录"}
+S.list.push({id:Date.now()+Math.random().toString(36).slice(2,5),d:d,type:$("ty").value,k:$("cat").value,n:$("n").value.trim(),a:a,r:+$("r").value,c:$("c").checked,pk:oldpk});
+S.anc=d.slice(0,7);$("a").value="";$("n").value="";save();render()};
+var editId=null;
+$("ls").onclick=function(e){var t=e.target.dataset,id=t.id;
+if(t.ed2){var en=S.list.filter(function(x){return x.id===t.ed2})[0];if(en){editId=en.id;$('d').value=en.d;$('ty').value=en.type;fillCat();$('cat').value=en.k||$('cat').value;$('n').value=en.n||'';$('a').value=en.a;$('r').value=String(en.r);$('c').checked=!!en.c;$('add').textContent='保存修改';render();window.scrollTo(0,0)}return}
+if(id){S.list=S.list.filter(function(x){return x.id!==id});save();render()}};
+function remind(t){var o=[],y=t.getFullYear();
+function nx(m,d){var x=new Date(y,m,d);return x<t?new Date(y+1,m,d):x}
+var d1=new Date(y,t.getMonth(),15);if(d1<t)d1=new Date(y,t.getMonth()+1,15);
+var d2=null;[0,3,6,9].forEach(function(m){var x=new Date(y,m,15);if(!d2&&x>=t)d2=x});if(!d2)d2=new Date(y+1,0,15);
+var qn=d2.getMonth()/3||4;
+if(S.type==='general')o.push([d1,'增值税及附加税申报（'+(d1.getMonth()||12)+' 月所属期）']);
+else o.push([d2,'增值税及附加税申报（'+qn+' 季度）']);
+o.push([d2,(S.type==='geti'?'经营所得个税季度预缴（':'企业所得税季度预缴（')+qn+' 季度）']);
+o.push(S.type==='geti'?[nx(2,31),'经营所得个税年度汇算']:[nx(4,31),'企业所得税年度汇算清缴']);
+o.push([nx(5,30),S.type==='geti'?'个体工商户年度报告':'企业年度报告']);
+return o}
+var delArm=false;
+$('bk').onchange=function(){save();BK.cur=this.value;S=defS();load();if(!S.anc)S.anc=iso;save();render()};
+$('bnew').onclick=function(){var n=$('bn').value.trim();if(!n){alert('请输入账套名称');return}save();var id='b'+Date.now();BK.names[id]=n;BK.cur=id;S=defS();S.anc=iso;save();$('bn').value='';render()};
+$('bdel').onclick=function(){if(Object.keys(BK.names).length<2){alert('至少保留一个账套');return}
+if(!delArm){delArm=true;this.textContent='再点一次确认删除';return}
+delArm=false;try{localStorage.removeItem('acct_'+BK.cur)}catch(e){}delete BK.names[BK.cur];BK.cur=Object.keys(BK.names)[0];S=defS();load();if(!S.anc)S.anc=iso;save();render()};
+$('iadd').onclick=function(){var a=parseFloat($('iam').value),cu=$('icu').value.trim();if(!(a>0)||!cu){alert('请填写客户/供应商和金额');return}
+S.inv=S.inv||[];S.inv.push({id:Date.now()+'',d:$('d').value,dr:$('idr').value,cu:cu,no:$('ino').value.trim(),tp:$('ity').value,a:a,st:'open'});$('iam').value='';$('ino').value='';save();render()};
+$('ilist').onclick=function(e){var t=e.target.dataset;if(t.st){S.inv.forEach(function(v){if(v.id===t.st)v.st=v.st==='done'?'open':'done'})}else if(t.iv){S.inv=S.inv.filter(function(v){return v.id!==t.iv})}else return;save();render()};
+var SS=[['基本养老保险',.14,.08,5521,27603],['基本医疗保险',.06,.02,6234,31170],['生育保险',.0085,0,6234,31170],['失业保险',.0032,.002,5521,27603],['工伤保险',.002,0,5521,27603]];
+function ssRows(q){var md=q.m||'pct';if(md==='pct')return null;return SS.map(function(s){var b=md==='min'?s[3]:Math.min(Math.max(q.w,s[3]),s[4]);return {n:s[0],b:b,ur:s[1],pr:s[2],u:b*s[1],p:b*s[2]}})}
+function ssOf(q){var r=ssRows(q);if(!r)return q.w*(q.rt||0)/100;var t=0;r.forEach(function(x){t+=x.u});return t}
+function ssP(q){var r=ssRows(q),t=0;if(r)r.forEach(function(x){t+=x.p});return t}
+function ln(a,b,c){return '<div class="tax"><div>'+a+(b?'<em>'+b+'</em>':'')+'</div><strong>'+c+'</strong></div>'}
+function xrender(){var hx=$('xhx').checked?.5:1,v=function(i){return parseFloat($(i).value)||0};
+var cc=calc(S.list.filter(function(e){return inP(e.d,S.anc,S.mode)}),S.type,+S.vr),yr=+$('xyt').value,tag=hx<1?' · 减半':'';
+var h=ln('本期买卖合同印花税（估算）','本期不含税销售额 '+m2(cc.inN)+' × 0.03%'+tag,m2(cc.inN*.0003*hx));
+h+=ln('印花税（上面这笔合同）',(yr*100)+'%'+tag,m2(v('xya')*yr*hx));
+h+=ln('房产税（自用）','原值 × (1−30%) × 1.2%'+tag,m2(v('xfo')*.7*.012*hx));
+h+=ln('房产税（出租）','年租金 × 12%（个人出租住房 4%）'+tag,m2(v('xfr')*.12*hx));
+h+=ln('城镇土地使用税','面积 × 年税额'+tag,m2(v('xla')*v('xlr')*hx));
+var n=v('xcn'),d=v('xcd'),w=v('xcw');
+if(n<=0)h+=ln('残疾人就业保障金','填写上年职工人数后计算','—');
+else if(n<=30)h+=ln('残疾人就业保障金','在职职工 30 人（含）以下，暂免征收（至 2027 年底）',m2(0));
+else{var need=n*.015,gap=Math.max(need-d,0),ra=d/n>=.015?0:d/n>=.01?.5:.9;
+h+=ln('残疾人就业保障金','应安排 '+need.toFixed(1)+' 人，已安排 '+d+' 人'+(ra?'，差额 '+gap.toFixed(1)+' 人 × 年均工资，减缴后按 '+(ra*100)+'%':'，已达标不缴'),m2(gap*w*ra))}
+$('xout').innerHTML=h}
+function iit(c){var b=[[36000,.03,0],[144000,.1,2520],[300000,.2,16920],[420000,.25,31920],[660000,.3,52920],[960000,.35,85920],[1e12,.45,181920]];if(c<=0)return 0;for(var i=0;i<b.length;i++)if(c<=b[i][0])return c*b[i][1]-b[i][2]}
+function gj(q){var b=q.gb>0?q.gb:q.w,u=(q.gu||0)/100,p=(q.gp||0)/100;return (u||p)?{n:'住房公积金',b:b,ur:u,pr:p,u:b*u,p:b*p}:null}
+function pr(anc,mode){var y=+anc.slice(0,4),m=+anc.slice(5,7)-1,b=y*12;if(mode==='year')return[b,b+11];if(mode==='quarter'){var q=Math.floor(m/3)*3;return[b+q,b+q+2]}return[b+m,b+m]}
+function fm(a,p0,p1){var s=(+a.d.slice(0,4))*12+(+a.d.slice(5,7)-1)+1,e=s+a.life*12-1;return Math.max(0,Math.min(e,p1)-Math.max(s,p0)+1)}
+function mdp(a){return a.v*(1-a.sv/100)/(a.life*12)}
+function depOf(anc,mode){var p=pr(anc,mode),t=0;(S.fa||[]).forEach(function(a){t+=fm(a,p[0],p[1])*mdp(a)});return t}
+$('fadd').onclick=function(){var v=parseFloat($('fv').value),l=Math.round(parseFloat($('fl').value)),n=$('fn').value.trim();if(!(v>0)||!(l>0)||!n){alert('请填写名称、原值和使用年限');return}
+S.fa.push({id:Date.now()+'',n:n,d:$('fd').value||$('d').value,v:v,life:l,sv:parseFloat($('fs').value)||0});$('fn').value='';$('fv').value='';save();render()};
+$('flist').onclick=function(e){var i=e.target.dataset.fd;if(i){S.fa=S.fa.filter(function(x){return x.id!==i});save();render()}};
+$('eadd').onclick=function(){var w=parseFloat($('ew').value),n=$('en').value.trim();if(!(w>0)||!n){alert('请填写姓名和月工资');return}
+S.emp.push({id:Date.now()+'',n:n,w:w,m:$('em').value,rt:parseFloat($('er').value)||0,gb:parseFloat($('gb').value)||0,gu:parseFloat($('gu').value)||0,gp:parseFloat($('gp').value)||0,gd:parseFloat($('gd').value)||0});$('en').value='';$('ew').value='';save();render()};
+$('elist').onclick=function(e){var i=e.target.dataset.ed;if(i){S.emp=S.emp.filter(function(x){return x.id!==i});save();render()}};
+$('epay').onclick=function(){var a=S.anc,y=+a.slice(0,4),m=+a.slice(5,7),d=a+'-'+('0'+new Date(y,m,0).getDate()).slice(-2),n=0;
+S.emp.forEach(function(q){var k='pay:'+a+':'+q.id;if(S.list.some(function(e){return e.pk===k}))return;
+S.list.push({id:Date.now()+Math.random().toString(36).slice(2,6),d:d,type:'out',k:'工资社保',n:q.n+' 工资',a:q.w,r:0,c:false,pk:k});
+var sv=ssOf(q);if(sv>0)S.list.push({id:Date.now()+Math.random().toString(36).slice(2,6),d:d,type:'out',k:'工资社保',n:q.n+' 单位社保',a:sv,r:0,c:false,pk:k+'s'});var g2=gj(q);if(g2&&g2.u>0)S.list.push({id:Date.now()+Math.random().toString(36).slice(2,6),d:d,type:'out',k:'工资社保',n:q.n+' 单位公积金',a:g2.u,r:0,c:false,pk:k+'g'});n++});
+save();render();alert(n?'已记入 '+n+' 人':'该月份已记入，或还没有员工')};
+$('bexp').onclick=function(){save();var d={bk:BK,data:{}};Object.keys(BK.names).forEach(function(id){try{d.data[id]=JSON.parse(localStorage.getItem('acct_'+id)||'{}')}catch(e){}});var ta=$('bta');ta.value=JSON.stringify(d);ta.select();try{document.execCommand('copy')}catch(e){}};
+$('bimp').onclick=function(){try{var d=JSON.parse($('bta').value);if(!d.bk||!d.data)throw 0;Object.keys(d.data).forEach(function(id){localStorage.setItem('acct_'+id,JSON.stringify(d.data[id]))});for(var id in d.bk.names)BK.names[id]=d.bk.names[id];S=defS();load();if(!S.anc)S.anc=iso;save();render();alert('恢复成功')}catch(e){alert('备份内容无法识别，请粘贴完整的备份文本')}};
+$('xcard').oninput=xrender;$('em').onchange=function(){$('erw').style.display=this.value==='pct'?'':'none'};initBK();fillCat();load();var now=new Date(),iso=now.getFullYear()+"-"+("0"+(now.getMonth()+1)).slice(-2);
+if(!S.anc)S.anc=iso;$("d").value=iso+"-"+("0"+now.getDate()).slice(-2);render();
+</script>
+</body>
+</html>
